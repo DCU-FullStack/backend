@@ -61,7 +61,10 @@ public class AuthController {
             String password = request.get("password");
 
             User user = userService.findByUsername(username);
-            // TODO: Implement password verification
+            
+            if (!userService.verifyPassword(password, user.getPassword())) {
+                throw new RuntimeException("Invalid password");
+            }
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
@@ -91,6 +94,35 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Profile updated successfully");
+            response.put("user", updatedUser);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePassword(@RequestBody Map<String, String> request) {
+        try {
+            Long userId = Long.parseLong(request.get("userId"));
+            String currentPassword = request.get("currentPassword");
+            String newPassword = request.get("newPassword");
+            String confirmNewPassword = request.get("confirmNewPassword");
+
+            if (!newPassword.equals(confirmNewPassword)) {
+                throw new RuntimeException("New passwords do not match");
+            }
+
+            User updatedUser = userService.changePassword(userId, currentPassword, newPassword);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Password changed successfully");
             response.put("user", updatedUser);
             
             return ResponseEntity.ok(response);
