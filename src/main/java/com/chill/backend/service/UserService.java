@@ -14,7 +14,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public User register(String username, String email, String password, String phoneNumber) {
+    public User register(String username, String email, String password, String phoneNumber, String name) {
         if (userRepository.existsByUsername(username)) {
             throw new RuntimeException("Username already exists");
         }
@@ -27,6 +27,7 @@ public class UserService {
                 .email(email)
                 .password(passwordEncoder.encode(password))
                 .phoneNumber(phoneNumber)
+                .name(name)
                 .build();
 
         return userRepository.save(user);
@@ -41,5 +42,22 @@ public class UserService {
     public User findByEmail(String email) {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @Transactional
+    public User updateProfile(Long userId, String name, String email, String phoneNumber) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Check if email is already taken by another user
+        if (!user.getEmail().equals(email) && userRepository.existsByEmail(email)) {
+            throw new RuntimeException("Email already exists");
+        }
+
+        user.setName(name);
+        user.setEmail(email);
+        user.setPhoneNumber(phoneNumber);
+
+        return userRepository.save(user);
     }
 } 
