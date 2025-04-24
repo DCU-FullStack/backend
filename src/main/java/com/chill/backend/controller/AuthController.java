@@ -136,4 +136,32 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
     }
+
+    @PostMapping("/delete-account")
+    public ResponseEntity<?> deleteAccount(@RequestBody Map<String, String> request) {
+        try {
+            Long userId = Long.parseLong(request.get("userId"));
+            String password = request.get("password");
+
+            User user = userService.findById(userId);
+            
+            if (!passwordEncoder.matches(password, user.getPassword())) {
+                throw new RuntimeException("Invalid password");
+            }
+
+            userService.deleteAccount(userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Account deleted successfully");
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
 } 
