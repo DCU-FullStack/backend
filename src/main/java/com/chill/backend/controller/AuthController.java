@@ -4,6 +4,7 @@ import com.chill.backend.model.User;
 import com.chill.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
@@ -62,7 +64,7 @@ public class AuthController {
 
             User user = userService.findByUsername(username);
             
-            if (!userService.verifyPassword(password, user.getPassword())) {
+            if (!passwordEncoder.matches(password, user.getPassword())) {
                 throw new RuntimeException("Invalid password");
             }
             
