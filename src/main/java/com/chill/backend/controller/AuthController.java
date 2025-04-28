@@ -1,9 +1,15 @@
 package com.chill.backend.controller;
 
 import com.chill.backend.model.User;
+import com.chill.backend.security.JwtTokenProvider;
 import com.chill.backend.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,6 +22,8 @@ import java.util.Map;
 public class AuthController {
     private final UserService userService;
     private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
@@ -37,6 +45,17 @@ public class AuthController {
 
             if (name == null || name.isEmpty()) {
                 throw new RuntimeException("Name is required");
+            }
+
+            // 모든 필수 필드가 있는지 확인
+            if (username == null || username.isEmpty()) {
+                throw new RuntimeException("Username is required");
+            }
+            if (email == null || email.isEmpty()) {
+                throw new RuntimeException("Email is required");
+            }
+            if (password == null || password.isEmpty()) {
+                throw new RuntimeException("Password is required");
             }
 
             User user = userService.register(username, email, password, phoneNumber, name);
@@ -68,12 +87,21 @@ public class AuthController {
                 throw new RuntimeException("Invalid password");
             }
             
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(username, password)
+            );
+            
+            String token = jwtTokenProvider.createToken(authentication);
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Login successful");
+            response.put("token", token);
             response.put("user", user);
             
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok()
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                .body(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);

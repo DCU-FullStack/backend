@@ -28,6 +28,7 @@ public class UserService {
                 .password(passwordEncoder.encode(password))
                 .phoneNumber(phoneNumber)
                 .name(name)
+                .role(User.Role.USER)
                 .build();
 
         return userRepository.save(user);
