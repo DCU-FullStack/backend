@@ -1,71 +1,89 @@
 package com.chill.backend.service;
 
 import com.chill.backend.model.Incident;
-import com.chill.backend.model.User;
+import com.chill.backend.model.Camera;
 import com.chill.backend.repository.IncidentRepository;
-import com.chill.backend.repository.UserRepository;
+import com.chill.backend.repository.CameraRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class IncidentService {
     private final IncidentRepository incidentRepository;
-    private final UserRepository userRepository;
-    private final UserService userService;
+    private final CameraRepository cameraRepository;
 
     public List<Incident> getAllIncidents() {
-        return incidentRepository.findAll();
+        return incidentRepository.findAllByOrderByIdAsc();
     }
 
     public Incident getIncidentById(Long id) {
         return incidentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("사고를 찾을 수 없습니다."));
+                .orElseThrow(() -> new RuntimeException("Incident not found with id: " + id));
     }
 
-    public Incident createIncident(Incident incident, String username) {
-        User reporter = userService.findByUsername(username);
-        incident.setReportedBy(reporter);
+    @Transactional
+    public Incident createIncident(Incident incident) {
+        if (incident.getCamera() != null) {
+            Camera camera = cameraRepository.findById(incident.getCamera().getId())
+                    .orElseGet(() -> {
+                        Camera newCamera = new Camera();
+                        newCamera.setId(incident.getCamera().getId());
+                        newCamera.setName(incident.getCamera().getName());
+                        newCamera.setLocation(incident.getCamera().getLocation());
+                        return cameraRepository.save(newCamera);
+                    });
+            incident.setCamera(camera);
+        }
+        
+        incident.setTimestamp(LocalDateTime.now());
         return incidentRepository.save(incident);
     }
 
+    @Transactional
     public Incident updateIncident(Long id, Incident incident) {
         Incident existingIncident = getIncidentById(id);
-        existingIncident.setTitle(incident.getTitle());
-        existingIncident.setDescription(incident.getDescription());
+        existingIncident.setDetectionType(incident.getDetectionType());
+        existingIncident.setConfidence(incident.getConfidence());
         existingIncident.setLocation(incident.getLocation());
-        existingIncident.setSeverity(incident.getSeverity());
-        existingIncident.setStatus(incident.getStatus());
         return incidentRepository.save(existingIncident);
     }
 
+    @Transactional
     public void deleteIncident(Long id) {
-        incidentRepository.deleteById(id);
-    }
+        try {
+            log.info("Attempting to delete incident with ID: {}", id);
+            
+            if (id == null) {
+                log.error("Attempted to delete incident with null ID");
+                throw new IllegalArgumentException("Incident ID cannot be null");
+            }
 
-    public List<Incident> getIncidentsByStatus(String status) {
-        return incidentRepository.findByStatus(status);
-    }
+            if (!incidentRepository.existsById(id)) {
+                log.warn("Incident with ID {} not found for deletion", id);
+                return; // 존재하지 않는 경우 예외를 발생시키지 않고 조용히 반환
+            }
 
-    public List<Incident> getIncidentsBySeverity(String severity) {
-        return incidentRepository.findBySeverity(severity);
+            incidentRepository.deleteById(id);
+            log.info("Successfully deleted incident with ID: {}", id);
+        } catch (Exception e) {
+            log.error("Error deleting incident with ID {}: {}", id, e.getMessage(), e);
+            throw new RuntimeException("Failed to delete incident: " + e.getMessage(), e);
+        }
     }
 
     public List<Incident> searchIncidentsByLocation(String location) {
         return incidentRepository.findByLocationContaining(location);
     }
 
-    public List<Incident> getIncidentsByUser(String username) {
-        User user = userService.findByUsername(username);
-        return incidentRepository.findByReportedBy_Id(user.getId());
-    }
-
-    public User getUserById(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    public void updateAllIncidents(List<Incident> incidents) {
+        incidentRepository.saveAll(incidents);
     }
 } 

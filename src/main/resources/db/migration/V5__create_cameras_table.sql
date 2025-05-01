@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS cameras (
+    id BIGINT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    location VARCHAR(255) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT '온라인',
+    image_url VARCHAR(255)
+); 

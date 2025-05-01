@@ -1,5 +1,6 @@
 package com.chill.backend.controller;
 
+import com.chill.backend.dto.RegisterRequest;
 import com.chill.backend.model.User;
 import com.chill.backend.security.JwtTokenProvider;
 import com.chill.backend.service.UserService;
@@ -26,18 +27,13 @@ public class AuthController {
     private final JwtTokenProvider jwtTokenProvider;
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Map<String, String> request) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         try {
-            String username = request.get("username");
-            String email = request.get("email");
-            String password = request.get("password");
-            String phoneNumber = request.get("phoneNumber");
-            String name = request.get("name");
-
-            // Check for phone_number field if phoneNumber is not present
-            if ((phoneNumber == null || phoneNumber.isEmpty()) && request.containsKey("phone_number")) {
-                phoneNumber = request.get("phone_number");
-            }
+            String username = request.getUsername();
+            String email = request.getEmail();
+            String password = request.getPassword();
+            String phoneNumber = request.getPhoneNumber() != null ? request.getPhoneNumber() : request.getPhone_number();
+            String name = request.getName();
 
             if (phoneNumber == null || phoneNumber.isEmpty()) {
                 throw new RuntimeException("Phone number is required");
@@ -47,7 +43,6 @@ public class AuthController {
                 throw new RuntimeException("Name is required");
             }
 
-            // 모든 필수 필드가 있는지 확인
             if (username == null || username.isEmpty()) {
                 throw new RuntimeException("Username is required");
             }
@@ -70,7 +65,6 @@ public class AuthController {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
             response.put("message", e.getMessage());
-            
             return ResponseEntity.badRequest().body(response);
         }
     }
@@ -81,7 +75,17 @@ public class AuthController {
             String username = request.get("username");
             String password = request.get("password");
 
+            if (username == null || username.isEmpty()) {
+                throw new RuntimeException("Username is required");
+            }
+            if (password == null || password.isEmpty()) {
+                throw new RuntimeException("Password is required");
+            }
+
             User user = userService.findByUsername(username);
+            if (user == null) {
+                throw new RuntimeException("User not found");
+            }
             
             if (!passwordEncoder.matches(password, user.getPassword())) {
                 throw new RuntimeException("Invalid password");
@@ -91,22 +95,23 @@ public class AuthController {
                 new UsernamePasswordAuthenticationToken(username, password)
             );
             
-            String token = jwtTokenProvider.createToken(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtTokenProvider.createToken(authentication);
             
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Login successful");
-            response.put("token", token);
+            response.put("token", jwt);
             response.put("user", user);
             
-            return ResponseEntity.ok()
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .body(response);
+            HttpHeaders headers = new HttpHeaders();
+            headers.add("Authorization", "Bearer " + jwt);
+
+            return ResponseEntity.ok().headers(headers).body(response);
         } catch (Exception e) {
             Map<String, Object> response = new HashMap<>();
             response.put("success", false);
-            response.put("message", "Invalid username or password");
-            
+            response.put("message", e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
     }
