@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/incidents")
@@ -47,5 +48,10 @@ public class IncidentController {
     @GetMapping("/search")
     public ResponseEntity<List<Incident>> searchIncidentsByLocation(@RequestParam String location) {
         return ResponseEntity.ok(incidentService.searchIncidentsByLocation(location));
+    }
+
+    @GetMapping("/statistics")
+    public ResponseEntity<Map<String, Object>> getIncidentStatistics() {
+        return ResponseEntity.ok(incidentService.getIncidentStatistics());
     }
 } 

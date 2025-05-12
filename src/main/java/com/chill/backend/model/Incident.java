@@ -16,9 +16,9 @@ public class Incident {
     @JoinColumn(name = "camera_id")
     private Camera camera;
 
-    @ManyToOne
-    @JoinColumn(name = "reported_by")
-    private User reportedBy;
+    // @ManyToOne
+    // @JoinColumn(name = "reported_by")
+    // private User reportedBy;
 
     @Column(nullable = false)
     private String title;

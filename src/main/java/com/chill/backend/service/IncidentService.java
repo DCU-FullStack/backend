@@ -11,6 +11,8 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @Slf4j
 @Service
@@ -85,5 +87,20 @@ public class IncidentService {
 
     public void updateAllIncidents(List<Incident> incidents) {
         incidentRepository.saveAll(incidents);
+    }
+
+    public Map<String, Object> getIncidentStatistics() {
+        List<Incident> allIncidents = incidentRepository.findAllByOrderByIdAsc();
+        long totalIncidents = allIncidents.size();
+        long lastIncidentId = allIncidents.isEmpty() ? 0 : allIncidents.get(allIncidents.size() - 1).getId();
+        long resolvedIncidents = lastIncidentId - totalIncidents;
+        long inProgressIncidents = totalIncidents;
+
+        Map<String, Object> statistics = new HashMap<>();
+        statistics.put("total", lastIncidentId);
+        statistics.put("resolved", resolvedIncidents);
+        statistics.put("inProgress", inProgressIncidents);
+
+        return statistics;
     }
 } 
