@@ -11,11 +11,14 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
@@ -33,6 +36,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (jwt != null && jwtTokenProvider.validateToken(jwt)) {
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
+                logger.debug("JWT token validated for user: {}", username);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
@@ -40,9 +44,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                logger.debug("Authentication set in SecurityContext for user: {}", username);
             }
         } catch (Exception ex) {
             logger.error("Could not set user authentication in security context", ex);
+            SecurityContextHolder.clearContext();
         }
 
         filterChain.doFilter(request, response);

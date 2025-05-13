@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +28,25 @@ public class IncidentController {
 
     @PostMapping
     public ResponseEntity<Incident> createIncident(@RequestBody Incident incident) {
-        return ResponseEntity.ok(incidentService.createIncident(incident));
+        try {
+            // 필수 필드 검증
+            if (incident.getTitle() == null || incident.getTitle().trim().isEmpty()) {
+                incident.setTitle("포트홀 감지"); // 기본값 설정
+            }
+            if (incident.getDetectionType() == null || incident.getDetectionType().trim().isEmpty()) {
+                incident.setDetectionType("Pothole"); // 기본값 설정
+            }
+            if (incident.getLocation() == null || incident.getLocation().trim().isEmpty()) {
+                incident.setLocation("위치 정보 없음"); // 기본값 설정
+            }
+            if (incident.getTimestamp() == null) {
+                incident.setTimestamp(LocalDateTime.now()); // 현재 시간으로 설정
+            }
+            
+            return ResponseEntity.ok(incidentService.createIncident(incident));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
     }
 
     @PutMapping("/{id}")
